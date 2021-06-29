@@ -1,0 +1,24 @@
+{
+    "version": 1,
+    "cheats": [
+        {
+            "categoryname": "Рванки",
+            "name": [
+                "Snos-Rvanka",
+                "OnFoot Rvanka"
+            ],
+            "description": [
+                "Рванка с 3 режимами OnFoot(с ног) c Vehicle(с транспорта) и AllMode(рванка на всех) || Чтобы открыть меню напишите - /snos.m| Чтобы включить OnFoot Рванку напишите - /snos.of [playerID]| Чтобы включить Veh Рванку напишите - /snos.veh [playerID]| Чтобы включить рванку на всех напишите - /snos.sll",
+                "OnFoot Rvanka"
+            ],
+            "usage": [
+                "!/snos.sll!/snos.m!&/snos.of &/snos.veh&",
+                "OnFoot Rvanka"
+            ],
+            "author": [
+                "Enlizmee",
+                "OnFoot Rvanka"
+            ]
+        }
+    ]
+}
