@@ -22,7 +22,7 @@ mainJson:close()
 
 update_status = false
 
-local script_vers = 12
+local script_vers = 1
 local script_vers_text = "2.00.00 alfa"
 
 local update_url = "https://raw.githubusercontent.com/BadKiko/SAMP-Sborka-by-Kiko/main/moonloader/updateCheatHelp.ini"
@@ -125,55 +125,23 @@ function imgui.OnDrawFrame()
 			--ЦИКЛ ПРОХОДИТСЯ ПО ВСЕМ КАТЕГОРИЯМ - ПЕРЕМЕННАЯ J - текущая категория
 			for j=1,getListLength(jsonData['cheats']) do
 
-				if imgui.TreeNode(u8(jsonData['cheats'][j]['categoryname'])) then
-
-					--ЦИКЛ ПРОХОДИТСЯ ПО ВСЕМ ЧИТАМ В КАТЕГОРИИ - ПЕРЕМЕННАЯ I - текущий чит
-					for i=1,getListLength(jsonData['cheats'][j]['name']) do
-
-						if imgui.TreeNode(u8(jsonData['cheats'][j]['name'][i])) then
-							imgui.Separator()
-							imgui.Text(u8' Название скрипта: '..u8(jsonData['cheats'][j]['name'][i]))
-							imgui.Separator()
-							imgui.Text(u8' Использование:')
-							for k=1,getSymbolLength(u8(jsonData['cheats'][j]['usage'][i]), '&')-1 do ---Команды которые прописываются в чат как заготовка
-								if(imgui.Button(spliutOnButtons(u8(jsonData['cheats'][j]['usage'][i]), '&')[k+1])) then
-									sampSetChatInputText(spliutOnButtons(u8(jsonData['cheats'][j]['usage'][i]), '&')[k+1])
-									sampSetChatInputEnabled(true)
-								end
-							end
-							for k=1,getSymbolLength(u8(jsonData['cheats'][j]['usage'][i]), '!')-1 do --Команды которые сразу выполняются
-								if(imgui.Button(spliutOnButtons(u8(jsonData['cheats'][j]['usage'][i]), '!')[k])) then
-									sampProcessChatInput(spliutOnButtons(u8(jsonData['cheats'][j]['usage'][i]), '!')[k])
-								end
-							end
-							imgui.Separator()
-							imgui.Text(u8' Описание: '..(string.gsub(u8(jsonData['cheats'][j]['description'][i]), "|", "\n")))
-							imgui.Separator()
-							imgui.Text(u8' Автор: '..u8(jsonData['cheats'][j]['author'][i]))
-							imgui.TreePop()
-						end
-
-					end
-					imgui.TreePop()
+				if u8(jsonData['cheats'][j]['categoryname']) ~= '' then
+					buildTree(u8(jsonData['cheats'][j]['categoryname']), j)
+				else
+					buildTree(u8"Безымянная категория", j)
 				end
-
 			end
 		--ЕСЛИ ИСПОЛЬЗУЕТСЯ ФИЛЬТР
 		else
 			for j=1,getListLength(jsonData['cheats']) do
 				for i=1,getListLength(jsonData['cheats'][j]['name']) do
-					if string.lower(u8(jsonData['cheats'][j]['name'][i])):find(string.lower(filter.v))
-					or string.lower(u8(jsonData['cheats'][j]['description'][i])):find(string.lower(filter.v))
-					or string.lower(u8(jsonData['cheats'][j]['usage'][i])):find(string.lower(filter.v))
-					or string.lower(u8(jsonData['cheats'][j]['author'][i])):find(string.lower(filter.v)) then --ЗДЕСЬ ИДЕТ ПОИСК ПО ИМЕНИ ЧИТА, ОПИСАНИЮ, КОММАНДАМ, АВТОРАМ
+					if filterSearch(j,i) then --ЗДЕСЬ ИДЕТ ПОИСК ПО ИМЕНИ ЧИТА, ОПИСАНИЮ, КОММАНДАМ, АВТОРАМ
 						if imgui.TreeNode(u8(jsonData['cheats'][j]['name'][i])) then
 							imgui.Separator()
 							imgui.Text(u8' Название скрипта: '..u8(jsonData['cheats'][j]['name'][i]))
 							imgui.Separator()
 							imgui.Text(u8' Использование:')
-							for k=1,getSymbolLength(u8(jsonData['cheats'][j]['usage'][i]), '&') do
-								imgui.Button(spliutOnButtons(u8(jsonData['cheats'][j]['usage'][i]), '&')[k])
-							end
+							buildButtons(j,i)
 							imgui.Separator()
 							imgui.Text(u8' Описание: '..(string.gsub(u8(jsonData['cheats'][j]['description'][i]), "|", "\n")))
 							imgui.Separator()
@@ -234,7 +202,7 @@ function apply_custom_style()
 	colors[clr.ScrollbarGrabActive]    = ImVec4(0.29, 0.29, 0.29, 1.00)
 	colors[clr.CheckMark]              = ImVec4(0.92, 0.33, 0.33, 1.00)
 	colors[clr.SliderGrab]             = ImVec4(0.92, 0.33, 0.33, 1.00)
-	colors[clr.SliderGrabActive]       = ImVec4(0.12, 0.12, 0.12, 1.00)
+	colors[clr.SliderGrabActive]       = ImVec4(0.2, 0.2, 0.2, 1.00)
 	colors[clr.Button]                 = ImVec4(0.37, 0.37, 0.37, 0.27)
 	colors[clr.ButtonHovered]          = ImVec4(0.16, 0.16, 0.16, 0.54)
 	colors[clr.ButtonActive]           = ImVec4(0.20, 0.20, 0.20, 0.54)
@@ -285,7 +253,8 @@ function getSymbolLength(text, symbol)
 	return value 
 end
 
-function spliutOnButtons (inputstr, sep)
+--Подразделение нашей строки из файла на кнопочки
+function splitOnButtons (inputstr, sep)
 	if sep == nil then
 			sep = "%s"
 	end
@@ -294,4 +263,101 @@ function spliutOnButtons (inputstr, sep)
 			table.insert(t, str)
 	end
 	return t
+end
+
+--Создание дерева
+function buildTree(categoryname, j)
+	if imgui.TreeNode(categoryname) then
+		--ЦИКЛ ПРОХОДИТСЯ ПО ВСЕМ ЧИТАМ В КАТЕГОРИИ - ПЕРЕМЕННАЯ I - текущий чит
+		for i=1,getListLength(jsonData['cheats'][j]['name']) do
+			local cheatname = u8(jsonData['cheats'][j]['name'][i])
+			if cheatname == '' then cheatname = u8"Безымянный чит" end
+			if imgui.TreeNode(cheatname) then
+
+				if u8(jsonData['cheats'][j]['name'][i]) ~= '' then
+					imgui.Separator()
+					imgui.Text(u8' Название скрипта: '..u8(jsonData['cheats'][j]['name'][i]))
+				else
+					imgui.Separator()
+					imgui.Text(u8' Название скрипта: Безымянный чит')
+				end
+				if u8(jsonData['cheats'][j]['usage'][i]) ~= '' then
+					imgui.Separator()
+					imgui.Text(u8' Использование:')
+				end
+
+
+				if (string.sub(jsonData['cheats'][j]['usage'][i], 1, 1) == '&') then --костыль)
+					for k=1,getSymbolLength(u8(jsonData['cheats'][j]['usage'][i]), '&')-1 do ---Команды которые прописываются в чат как заготовка
+						imgui.SameLine()
+						if(imgui.Button(splitOnButtons(u8(jsonData['cheats'][j]['usage'][i]), '&')[k])) then
+							sampSetChatInputText(splitOnButtons(u8(jsonData['cheats'][j]['usage'][i]), '&')[k])
+							sampSetChatInputEnabled(true)
+						end
+					end
+				else
+					for k=1,getSymbolLength(u8(jsonData['cheats'][j]['usage'][i]), '&')-1 do ---Команды которые прописываются в чат как заготовка
+						imgui.SameLine()
+						if(imgui.Button(splitOnButtons(u8(jsonData['cheats'][j]['usage'][i]), '&')[k+1])) then
+							sampSetChatInputText(splitOnButtons(u8(jsonData['cheats'][j]['usage'][i]), '&')[k+1])
+							sampSetChatInputEnabled(true)
+						end
+					end
+				end
+
+				for k=1,getSymbolLength(u8(jsonData['cheats'][j]['usage'][i]), '!')-1 do --Команды которые сразу выполняются
+					imgui.SameLine()
+					if(imgui.Button(splitOnButtons(u8(jsonData['cheats'][j]['usage'][i]), '!')[k])) then
+						sampProcessChatInput(splitOnButtons(u8(jsonData['cheats'][j]['usage'][i]), '!')[k])
+					end
+				end
+
+				if u8(jsonData['cheats'][j]['description'][i]) ~= '' then
+					imgui.Separator()
+					imgui.Text(u8' Описание: '..(string.gsub(u8(jsonData['cheats'][j]['description'][i]), "|", "\n")))
+				else
+					imgui.Separator()
+					imgui.Text(u8' Описание: Описания нет.')
+				end
+
+				if u8(jsonData['cheats'][j]['author'][i]) ~= '' then
+					imgui.Separator()
+					imgui.Text(u8' Автор: '..u8(jsonData['cheats'][j]['author'][i]))
+				else
+					imgui.Separator()
+					imgui.Text(u8' Автор: Неизвестный автор')
+				end
+				imgui.TreePop()
+			end
+
+		end
+		imgui.TreePop()
+		end
+end
+
+--Возвращает результаты поиска фильтра
+function filterSearch(j,i)
+	if string.lower(u8(jsonData['cheats'][j]['name'][i])):find(string.lower(filter.v))
+					or string.lower(u8(jsonData['cheats'][j]['description'][i])):find(string.lower(filter.v))
+					or string.lower(u8(jsonData['cheats'][j]['usage'][i])):find(string.lower(filter.v))
+					or string.lower(u8(jsonData['cheats'][j]['author'][i])):find(string.lower(filter.v)) then
+						return true
+					else
+						return false
+	end
+end
+
+--Создание кнопочек
+function buildButtons(j,i)
+	for k=1,getSymbolLength(u8(jsonData['cheats'][j]['usage'][i]), '&')-1 do ---Команды которые прописываются в чат как заготовка
+		if(imgui.Button(splitOnButtons(u8(jsonData['cheats'][j]['usage'][i]), '&')[k+1])) then
+			sampSetChatInputText(splitOnButtons(u8(jsonData['cheats'][j]['usage'][i]), '&')[k+1])
+			sampSetChatInputEnabled(true)
+		end
+	end
+	for k=1,getSymbolLength(u8(jsonData['cheats'][j]['usage'][i]), '!')-1 do --Команды которые сразу выполняются
+		if(imgui.Button(splitOnButtons(u8(jsonData['cheats'][j]['usage'][i]), '!')[k])) then
+			sampProcessChatInput(splitOnButtons(u8(jsonData['cheats'][j]['usage'][i]), '!')[k])
+		end
+	end
 end
